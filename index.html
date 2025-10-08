@@ -97,6 +97,7 @@ label{display:block;margin:5px;}
   <div id="profilListesi"></div>
 </section>
 
+<!-- SCRIPTLER -->
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js"></script>
@@ -113,53 +114,58 @@ const firebaseConfig = {
   appId:"1:110810439295:web:656f99f060ebfa88ba694a"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
-const auth=firebase.auth();
+const db = firebase.firestore();
+const auth = firebase.auth();
 
 let currentUser=null;
 let map=null;
 let secilenMarker=null;
 let secilenCoord=null;
 
-// LOGIN
-document.getElementById("loginBtn").onclick=async()=>{
-  const email=document.getElementById("email").value;
-  const password=document.getElementById("password").value;
-  try{
-    const userCredential=await auth.signInWithEmailAndPassword(email,password);
-    currentUser=userCredential.user;
+// LOGIN / REGISTER
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(email,password);
+    currentUser = userCredential.user;
     initApp();
-  }catch(e){alert("Giriş başarısız: "+e.message);}
+  } catch(e){ alert("Giriş başarısız: "+e.message);}
 }
-document.getElementById("registerBtn").onclick=async()=>{
-  const email=document.getElementById("email").value;
-  const password=document.getElementById("password").value;
-  try{
-    const userCredential=await auth.createUserWithEmailAndPassword(email,password);
-    currentUser=userCredential.user;
+document.getElementById("registerBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email,password);
+    currentUser = userCredential.user;
     await db.collection("users").doc(currentUser.uid).set({email:currentUser.email});
     initApp();
-  }catch(e){alert("Kayıt başarısız: "+e.message);}
+  } catch(e){ alert("Kayıt başarısız: "+e.message);}
 }
 
-// Ana uygulama başlat
+// ANA UYGULAMA
 function initApp(){
   showSection("menuSection");
   initMap();
   maclariGetir();
   maclariKatilGetir();
 
-  // MENU BUTONLARI
-  document.getElementById("btnBul").onclick=()=>{showSection("bulSection"); maclariGetir();}
-  document.getElementById("btnKatil").onclick=()=>{showSection("katilSection"); maclariKatilGetir();}
-  document.getElementById("btnOlustur").onclick=()=>showSection("olusturSection");
-  document.getElementById("btnProfil").onclick=()=>{showSection("profilSection"); profilGetir();}
-  document.getElementById("btnLogout").onclick=()=>{auth.signOut(); location.reload();}
+  document.getElementById("btnBul").onclick = ()=>{showSection("bulSection"); maclariGetir();}
+  document.getElementById("btnKatil").onclick = ()=>{showSection("katilSection"); maclariKatilGetir();}
+  document.getElementById("btnOlustur").onclick = ()=>showSection("olusturSection");
+  document.getElementById("btnProfil").onclick = ()=>{showSection("profilSection"); profilGetir();}
+  document.getElementById("btnLogout").onclick = ()=>{auth.signOut(); location.reload();}
 
-  document.getElementById("filtreIlce").onchange=maclariGetir;
-  document.getElementById("filtreBosPozisyon").onchange=maclariGetir;
-  document.getElementById("katilFiltreIlce").onchange=maclariKatilGetir;
-  document.getElementById("katilFiltreBosPozisyon").onchange=maclariKatilGetir;
+  document.getElementById("filtreIlce").onchange = maclariGetir;
+  document.getElementById("filtreBosPozisyon").onchange = maclariGetir;
+  document.getElementById("katilFiltreIlce").onchange = maclariKatilGetir;
+  document.getElementById("katilFiltreBosPozisyon").onchange = maclariKatilGetir;
+}
+
+// SHOW / HIDE
+function showSection(id){
+  document.querySelectorAll("section").forEach(s=>s.style.display="none");
+  document.getElementById(id).style.display="block";
 }
 
 // HARİTA
@@ -169,22 +175,21 @@ function initMap(){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'&copy; OpenStreetMap contributors'
   }).addTo(map);
-
   map.on('click',function(e){
     if(secilenMarker) map.removeLayer(secilenMarker);
-    secilenCoord=e.latlng;
-    secilenMarker=L.marker(e.latlng).addTo(map).bindPopup("Seçilen Saha").openPopup();
+    secilenCoord = e.latlng;
+    secilenMarker = L.marker(e.latlng).addTo(map).bindPopup("Seçilen Saha").openPopup();
   });
 }
 
 // MAÇ OLUŞTUR
-document.getElementById("kaydetBtn").onclick=async()=>{
+document.getElementById("kaydetBtn").onclick = async ()=>{
   const saha=document.getElementById("saha").value;
   const ilce=document.getElementById("ilce").value;
   const saat=document.getElementById("saat").value;
   const eksik=document.getElementById("eksik").value;
   const kackisi=document.getElementById("kackisi").value;
-  if(!saha||!saat||!secilenCoord) return alert("Saha, saat ve konumu girin!");
+  if(!saha || !saat || !secilenCoord) return alert("Saha, saat ve konumu girin!");
   await db.collection("maclar").add({
     saha,saat,eksik,kackisi,ilce,
     lat:secilenCoord.lat,
@@ -204,17 +209,30 @@ document.getElementById("kaydetBtn").onclick=async()=>{
   maclariKatilGetir();
 }
 
-// MAÇLARI GETİR
+// MAÇLARI GETİR (RENKLİ MARKER)
 async function maclariGetir(){
   if(!map) return;
   map.eachLayer(l=>{if(l instanceof L.Marker) map.removeLayer(l);});
+
   const filtreIlce=document.getElementById("filtreIlce").value;
   const bosPozisyon=document.getElementById("filtreBosPozisyon").checked;
-  const snapshot=await db.collection("maclar").get();
+  const snapshot = await db.collection("maclar").get();
   snapshot.forEach(doc=>{
     const mac=doc.data();
-    if((!filtreIlce||mac.ilce===filtreIlce)&&(!bosPozisyon||mac.eksik)){
-      if(mac.lat && mac.lng) L.marker([mac.lat,mac.lng]).addTo(map).bindPopup(`<b>${mac.saha}</b><br>${mac.saat}<br>${mac.ilce}`);
+    if((!filtreIlce || mac.ilce===filtreIlce) && (!bosPozisyon || mac.eksik)){
+      if(mac.lat && mac.lng){
+        const renk=mac.eksik ? "red" : "green";
+        const markerIcon=L.icon({
+          iconUrl:`https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${renk}.png`,
+          iconSize:[25,41],
+          iconAnchor:[12,41],
+          popupAnchor:[1,-34],
+          shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          shadowSize:[41,41]
+        });
+        L.marker([mac.lat,mac.lng],{icon:markerIcon}).addTo(map)
+          .bindPopup(`<b>${mac.saha}</b><br>🕒 ${mac.saat}<br>🧤 ${mac.eksik||"Yok"}<br>📍 ${mac.ilce||"Belirtilmemiş"}`);
+      }
     }
   });
 }
@@ -228,36 +246,40 @@ async function maclariKatilGetir(){
   const snapshot=await db.collection("maclar").get();
   snapshot.forEach(doc=>{
     const mac=doc.data();
-    if((!filtreIlce||mac.ilce===filtreIlce)&&(!bosPozisyon||mac.eksik)){
+    if((!filtreIlce || mac.ilce===filtreIlce) && (!bosPozisyon || mac.eksik)){
       const card=document.createElement("div"); card.className="card";
       card.innerHTML=`<h3>${mac.saha}</h3>
         <p>🕒 Saat: ${mac.saat}</p>
-        <p>🧤 Eksik: ${mac.eksik||"Yok"}</p>
+           <p>🧤 Eksik: ${mac.eksik||"Yok"}</p>
         <p>👥 Kişi lazım: ${mac.kackisi||"Belirtilmemiş"}</p>
         <p>📍 İlçe: ${mac.ilce||"Belirtilmemiş"}</p>
         <button class="primary">Katıl</button>`;
       container.appendChild(card);
-      card.querySelector("button").onclick=async ()=>{
+
+      // Katıl butonu
+      card.querySelector("button").onclick = async () => {
         if(!mac.katilanlar.includes(currentUser.email)){
           mac.katilanlar.push(currentUser.email);
-          await db.collection("maclar").doc(doc.id).update({katilanlar:mac.katilanlar});
+          await db.collection("maclar").doc(doc.id).update({katilanlar: mac.katilanlar});
           alert("Maça katıldınız!");
-          maclariKatilGetir();
-        }else alert("Zaten katılmışsınız!");
+          maclariKatilGetir(); // Listeyi güncelle
+        } else {
+          alert("Zaten katılmışsınız!");
+        }
       }
     }
   });
 }
 
-// PROFİL
+// PROFİL / MAÇLARIM
 async function profilGetir(){
   const container=document.getElementById("profilListesi");
   container.innerHTML='';
-  const snapshot=await db.collection("maclar").get();
+  const snapshot = await db.collection("maclar").get();
   snapshot.forEach(doc=>{
-    const mac=doc.data();
-    if(mac.olusturan===currentUser.email||mac.katilanlar.includes(currentUser.email)){
-      const card=document.createElement("div"); card.className="card";
+    const mac = doc.data();
+    if(mac.olusturan===currentUser.email || mac.katilanlar.includes(currentUser.email)){
+      const card = document.createElement("div"); card.className="card";
       card.innerHTML=`<h3>${mac.saha}</h3>
         <p>🕒 Saat: ${mac.saat}</p>
         <p>🧤 Eksik: ${mac.eksik||"Yok"}</p>
@@ -269,9 +291,6 @@ async function profilGetir(){
     }
   });
 }
-
 </script>
 </body>
 </html>
-
-
