@@ -4,12 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Halı Saha Bul</title>
-  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body { font-family: 'Arial'; margin: 0; background: #f9f9f9; text-align: center; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f9f9f9; text-align: center; }
     header { background: #2b6cb0; color: white; padding: 15px; font-size: 22px; }
     nav { display: flex; justify-content: center; gap: 10px; margin: 15px; flex-wrap: wrap; }
     button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -55,7 +52,10 @@
   </section>
 
   <script type="module">
-   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
+
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyB8-N4sVBtxIoZqikRhGoXv86YU_9K8ecA",
   authDomain: "halisaha-1537c.firebaseapp.com",
@@ -65,18 +65,9 @@ const firebaseConfig = {
   appId: "1:110810439295:web:656f99f060ebfa88ba694a",
   measurementId: "G-QQH8205FB0"
 };
-    const firebaseConfig = {
-      apiKey: "XXXX",
-      authDomain: "XXXX",
-      projectId: "XXXX",
-      storageBucket: "XXXX",
-      messagingSenderId: "XXXX",
-      appId: "XXXX"
-    };
 
-    // Firebase başlat
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
     // Bölüm geçişi
     function showSection(id) {
@@ -87,7 +78,7 @@ const firebaseConfig = {
     showSection('bul');
 
     // Harita başlat
-    const map = L.map('map').setView([41.0082, 28.9784], 11); // İstanbul merkez
+    const map = L.map('map').setView([41.0082, 28.9784], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -101,7 +92,7 @@ const firebaseConfig = {
 
       if (!saha || !saat) return alert("Lütfen saha adı ve saati girin!");
 
-      await db.collection("maclar").add({
+      await addDoc(collection(db, "maclar"), {
         saha, saat, eksik, kackisi, katilanlar: []
       });
 
@@ -110,6 +101,7 @@ const firebaseConfig = {
       document.getElementById('saat').value = '';
       document.getElementById('eksik').value = '';
       document.getElementById('kackisi').value = '';
+      showSection('bul'); // ekledikten sonra listeyi yenile
     }
 
     // Maçları listele ve haritada göster
@@ -117,7 +109,7 @@ const firebaseConfig = {
       const container = document.getElementById("macListesi");
       container.innerHTML = "";
 
-      const snapshot = await db.collection("maclar").get();
+      const snapshot = await getDocs(collection(db, "maclar"));
       snapshot.forEach(doc => {
         const mac = doc.data();
         const card = document.createElement("div");
@@ -130,7 +122,7 @@ const firebaseConfig = {
         `;
         container.appendChild(card);
 
-        // Haritada sahayı işaretle (örnek: random koordinat)
+        // Haritada sahayı işaretle (random koordinat)
         const lat = 41.0 + Math.random() * 0.1;
         const lng = 28.9 + Math.random() * 0.1;
         L.marker([lat, lng]).addTo(map).bindPopup(`<b>${mac.saha}</b><br>${mac.saat}`);
