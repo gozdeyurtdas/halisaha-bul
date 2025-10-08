@@ -23,9 +23,9 @@
 <body>
   <header>⚽ Halı Saha Bul</header>
   <nav>
-    <button class="secondary" onclick="showSection('bul')">Halı Saha Bul</button>
-    <button class="secondary" onclick="showSection('katil')">Maça Katıl</button>
-    <button class="primary" onclick="showSection('olustur')">Maç Oluştur</button>
+    <button class="secondary" id="btnBul">Halı Saha Bul</button>
+    <button class="secondary" id="btnKatil">Maça Katıl</button>
+    <button class="primary" id="btnOlustur">Maç Oluştur</button>
   </nav>
 
   <!-- Halı Saha Bul -->
@@ -43,19 +43,21 @@
   <section id="olustur">
     <div class="card">
       <h3>Yeni Maç Oluştur</h3>
-      <input id="saha" placeholder="Halı Saha Adı veya Adres" />
+      <input id="saha" placeholder="Halı Saha Adı" />
       <input id="saat" placeholder="Saat (örnek: 20:00)" />
       <input id="eksik" placeholder="Eksik pozisyon (örnek: kaleci)" />
       <input id="kackisi" type="number" placeholder="Kaç kişi lazım?" />
-      <button class="primary" onclick="macOlustur()">Maçı Kaydet</button>
+      <p>📍 Saha konumunu haritada seçin</p>
+      <button class="primary" id="kaydetBtn">Maçı Kaydet</button>
     </div>
   </section>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
-
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  <!-- Firebase SDK (non-module) -->
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js"></script>
+  
+  <script>
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyB8-N4sVBtxIoZqikRhGoXv86YU_9K8ecA",
   authDomain: "halisaha-1537c.firebaseapp.com",
@@ -65,74 +67,12 @@ const firebaseConfig = {
   appId: "1:110810439295:web:656f99f060ebfa88ba694a",
   measurementId: "G-QQH8205FB0"
 };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
     // Bölüm geçişi
-    function showSection(id) {
-      document.querySelectorAll("section").forEach(sec => sec.style.display = "none");
-      document.getElementById(id).style.display = "block";
-      if (id === "bul") maclariGetir();
-    }
+    function showSection(id){
+      document.querySelectorAll("section").forEach(s => s.style.display="none");
+      document.getElementById(id).style.display
 
-    // Fonksiyonu global yap
-    window.showSection = showSection;
 
-    // Sayfa açılışında 'bul' bölümünü göster
-    showSection('bul');
-
-    // Harita başlat
-    const map = L.map('map').setView([41.0082, 28.9784], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Maç oluşturma
-    async function macOlustur() {
-      const saha = document.getElementById('saha').value;
-      const saat = document.getElementById('saat').value;
-      const eksik = document.getElementById('eksik').value;
-      const kackisi = document.getElementById('kackisi').value;
-
-      if (!saha || !saat) return alert("Lütfen saha adı ve saati girin!");
-
-      await addDoc(collection(db, "maclar"), {
-        saha, saat, eksik, kackisi, katilanlar: []
-      });
-
-      alert("Maç başarıyla eklendi!");
-      document.getElementById('saha').value = '';
-      document.getElementById('saat').value = '';
-      document.getElementById('eksik').value = '';
-      document.getElementById('kackisi').value = '';
-      showSection('bul'); // ekledikten sonra listeyi yenile
-    }
-
-    // Maçları listele ve haritada göster
-    async function maclariGetir() {
-      const container = document.getElementById("macListesi");
-      container.innerHTML = "";
-
-      const snapshot = await getDocs(collection(db, "maclar"));
-      snapshot.forEach(doc => {
-        const mac = doc.data();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <h3>${mac.saha}</h3>
-          <p>🕒 Saat: ${mac.saat}</p>
-          <p>🧤 Eksik: ${mac.eksik || "Yok"}</p>
-          <p>👥 Kişi lazım: ${mac.kackisi || "Belirtilmemiş"}</p>
-        `;
-        container.appendChild(card);
-
-        // Haritada sahayı işaretle (random koordinat)
-        const lat = 41.0 + Math.random() * 0.1;
-        const lng = 28.9 + Math.random() * 0.1;
-        L.marker([lat, lng]).addTo(map).bindPopup(`<b>${mac.saha}</b><br>${mac.saat}`);
-      });
-    }
-  </script>
-</body>
-</html>
