@@ -97,7 +97,6 @@ label{display:block;margin:5px;}
   <div id="profilListesi"></div>
 </section>
 
-<!-- SCRIPTLER -->
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js"></script>
@@ -182,7 +181,7 @@ function initMap(){
 }
 
 // MAÇ OLUŞTUR
-document.getElementById("kaydetBtn").onclick = async ()=>{
+document.getElementById("kaydetBtn").onclick = async ()=> {
   const saha=document.getElementById("saha").value;
   const ilce=document.getElementById("ilce").value;
   const saat=document.getElementById("saat").value;
@@ -210,12 +209,11 @@ document.getElementById("kaydetBtn").onclick = async ()=>{
 
 // MAÇLARI GETİR (HARİTA)
 async function maclariGetir(){
-  const container=document.getElementById("map");
-  container.innerHTML='';
   if(!map) initMap();
   const ilceFiltre=document.getElementById("filtreIlce").value;
   const bosPozisyon=document.getElementById("filtreBosPozisyon").checked;
   const snapshot=await db.collection("maclar").get();
+  
   snapshot.forEach(doc=>{
     const mac=doc.data();
     if(ilceFiltre && mac.ilce!==ilceFiltre) return;
@@ -232,7 +230,8 @@ async function maclariKatilGetir(){
   const ilceFiltre=document.getElementById("katilFiltreIlce").value;
   const bosPozisyon=document.getElementById("katilFiltreBosPozisyon").checked;
   const snapshot=await db.collection("maclar").get();
-  snapshot.forEach(async doc=>{
+  
+  snapshot.forEach(doc=>{
     const mac=doc.data();
     if(ilceFiltre && mac.ilce!==ilceFiltre) return;
     if(bosPozisyon && !mac.eksik) return;
