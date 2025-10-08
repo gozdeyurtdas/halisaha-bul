@@ -75,6 +75,11 @@ const firebaseConfig = {
       document.getElementById(id).style.display = "block";
       if (id === "bul") maclariGetir();
     }
+
+    // Fonksiyonu global yap
+    window.showSection = showSection;
+
+    // Sayfa açılışında 'bul' bölümünü göster
     showSection('bul');
 
     // Harita başlat
