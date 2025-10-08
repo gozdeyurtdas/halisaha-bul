@@ -18,6 +18,7 @@ section{display:none;}
 .card{background:white;margin:10px auto;padding:15px;width:90%;border-radius:10px;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
 input,select{padding:8px;margin:5px;width:80%;border-radius:6px;border:1px solid #ccc;}
 h3{margin-top:0;}
+label{display:block;margin:5px;}
 </style>
 </head>
 <body>
@@ -47,11 +48,31 @@ h3{margin-top:0;}
 
 <!-- Halı Saha Bul -->
 <section id="bul">
+  <label>İlçe filtrele:
+    <select id="filtreIlce">
+      <option value="">Tüm İlçeler</option>
+      <option value="Kadıköy">Kadıköy</option>
+      <option value="Beşiktaş">Beşiktaş</option>
+      <option value="Şişli">Şişli</option>
+      <option value="Bakırköy">Bakırköy</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="filtreBosPozisyon"/> Sadece eksik pozisyonları göster</label>
   <div id="map"></div>
 </section>
 
 <!-- Maça Katıl -->
 <section id="katil">
+  <label>İlçe filtrele:
+    <select id="katilFiltreIlce">
+      <option value="">Tüm İlçeler</option>
+      <option value="Kadıköy">Kadıköy</option>
+      <option value="Beşiktaş">Beşiktaş</option>
+      <option value="Şişli">Şişli</option>
+      <option value="Bakırköy">Bakırköy</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="katilFiltreBosPozisyon"/> Sadece eksik pozisyonları göster</label>
   <div id="katilListesi"></div>
 </section>
 
@@ -60,6 +81,7 @@ h3{margin-top:0;}
   <div class="card">
     <h3>Yeni Maç Oluştur</h3>
     <input id="saha" placeholder="Halı Saha Adı" />
+    <input id="ilce" placeholder="İlçe / Semt" />
     <input id="saat" placeholder="Saat (20:00)" />
     <input id="eksik" placeholder="Eksik pozisyon" />
     <input id="kackisi" type="number" placeholder="Kaç kişi lazım?" />
@@ -76,7 +98,7 @@ h3{margin-top:0;}
 
 </section>
 
-<!-- Firebase SDK (non-module) -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js"></script>
@@ -152,6 +174,12 @@ function initMain(){
     });
   }
 
+  // Filtre eventleri
+  document.getElementById("filtreIlce").onchange = maclariGetir;
+  document.getElementById("filtreBosPozisyon").onchange = maclariGetir;
+  document.getElementById("katilFiltreIlce").onchange = maclariKatilGetir;
+  document.getElementById("katilFiltreBosPozisyon").onchange = maclariKatilGetir;
+
   showSection("bul");
   maclariGetir();
 }
@@ -176,14 +204,14 @@ function showSection(id){
 // Maç oluştur
 document.getElementById("kaydetBtn").onclick=async function(){
   const saha=document.getElementById("saha").value;
+  const ilce=document.getElementById("ilce").value;
   const saat=document.getElementById("saat").value;
   const eksik=document.getElementById("eksik").value;
   const kackisi=document.getElementById("kackisi").value;
   if(!saha||!saat||!secilenCoord){return alert("Saha, saat ve konumu girin!");}
   await db.collection("maclar").add({
-    saha,saat,eksik,kackisi,
-    lat:secilenCoord.lat,
-    lng:secilenCoord.lng,
+    saha,saat,eksik,kackisi,ilce,
+    lat:secilenCoord.lat,lng:secilenCoord.lng,
     olusturan:currentUser.email,
     katilanlar:[]
   });
@@ -192,57 +220,59 @@ document.getElementById("kaydetBtn").onclick=async function(){
   document.getElementById("saat").value='';
   document.getElementById("eksik").value='';
   document.getElementById("kackisi").value='';
+  document.getElementById("ilce").value='';
   if(secilenMarker) map.removeLayer(secilenMarker);
   secilenCoord=null;
   showSection("bul");
 }
 
-// Maçları Halı Saha Bul / Ana Haritada göster
+// Halı Saha Bul
 async function maclariGetir(){
-  const mapContainer=document.getElementById("map");
-  map.eachLayer(l=>{
-    if(l instanceof L.Marker) map.removeLayer(l);
-  });
+  const filtreIlce=document.getElementById("filtreIlce").value;
+  const bosPozisyon=document.getElementById("filtreBosPozisyon").checked;
+  map.eachLayer(l=>{if(l instanceof L.Marker) map.removeLayer(l);});
   const snapshot=await db.collection("maclar").get();
   snapshot.forEach(doc=>{
     const mac=doc.data();
-    if(mac.lat && mac.lng){
-      L.marker([mac.lat,mac.lng]).addTo(map)
-        .bindPopup(`<b>${mac.saha}</b><br>${mac.saat}`);
+    if((!filtreIlce||mac.ilce===filtreIlce)&&(!bosPozisyon||mac.eksik)){
+      if(mac.lat && mac.lng){
+        L.marker([mac.lat,mac.lng]).addTo(map)
+          .bindPopup(`<b>${mac.saha}</b><br>${mac.saat}<br>${mac.ilce}`);
+      }
     }
   });
 }
 
-// Maça Katıl listesi
+// Maça Katıl
 async function maclariKatilGetir(){
+  const filtreIlce=document.getElementById("katilFiltreIlce").value;
+  const bosPozisyon=document.getElementById("katilFiltreBosPozisyon").checked;
   const container=document.getElementById("katilListesi");
   container.innerHTML="";
   const snapshot=await db.collection("maclar").get();
   snapshot.forEach(doc=>{
     const mac=doc.data();
-    const card=document.createElement("div");
-    card.className="card";
-    let katilButton='<button class="primary">Katıl</button>';
-    card.innerHTML=`
-      <h3>${mac.saha}</h3>
-      <p>🕒 Saat: ${mac.saat}</p>
-      <p>🧤 Eksik: ${mac.eksik || "Yok"}</p>
-      <p>👥 Kişi lazım: ${mac.kackisi || "Belirtilmemiş"}</p>
-      ${katilButton}
-    `;
-    container.appendChild(card);
-
-    // Katıl buton event
-    card.querySelector("button").onclick=async ()=>{
-      if(!mac.katilanlar.includes(currentUser.email)){
-        mac.katilanlar.push(currentUser.email);
-        await db.collection("maclar").doc(doc.id).update({katilanlar:mac.katilanlar});
-        alert("Maça katıldınız!");
-        maclariKatilGetir();
-      }else{
-        alert("Zaten katılmışsınız!");
+    if((!filtreIlce||mac.ilce===filtreIlce)&&(!bosPozisyon||mac.eksik)){
+      const card=document.createElement("div");
+      card.className="card";
+      card.innerHTML=`
+        <h3>${mac.saha}</h3>
+        <p>🕒 Saat: ${mac.saat}</p>
+        <p>🧤 Eksik: ${mac.eksik||"Yok"}</p>
+        <p>👥 Kişi lazım: ${mac.kackisi||"Belirtilmemiş"}</p>
+        <p>📍 İlçe: ${mac.ilce||"Belirtilmemiş"}</p>
+        <button class="primary">Katıl</button>
+      `;
+      container.appendChild(card);
+      card.querySelector("button").onclick=async ()=>{
+        if(!mac.katilanlar.includes(currentUser.email)){
+          mac.katilanlar.push(currentUser.email);
+          await db.collection("maclar").doc(doc.id).update({katilanlar:mac.katilanlar});
+          alert("Maça katıldınız!");
+          maclariKatilGetir();
+        } else { alert("Zaten katılmışsınız!"); }
       }
-    };
+    }
   });
 }
 
@@ -261,6 +291,7 @@ async function profilGetir(){
         <p>🕒 Saat: ${mac.saat}</p>
         <p>🧤 Eksik: ${mac.eksik || "Yok"}</p>
         <p>👥 Kişi lazım: ${mac.kackisi || "Belirtilmemiş"}</p>
+        <p>📍 İlçe: ${mac.ilce || "Belirtilmemiş"}</p>
         <p>🧑 Katılanlar: ${mac.katilanlar.join(", ")}</p>
         <p>🔹 Oluşturan: ${mac.olusturan}</p>
       `;
@@ -272,4 +303,3 @@ async function profilGetir(){
 </script>
 </body>
 </html>
-
