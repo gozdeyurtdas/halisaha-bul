@@ -1,177 +1,237 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Halı Saha Bul</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #e8fff0;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    header {
+      background-color: #006f3c;
+      color: white;
+      padding: 15px;
+      font-size: 22px;
+    }
+    .container {
+      margin-top: 40px;
+    }
+    input {
+      margin: 5px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 230px;
+    }
+    button {
+      background-color: #00a65a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007f46;
+    }
+    .hidden {
+      display: none;
+    }
+    .match-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin: 10px auto;
+      padding: 10px;
+      width: 80%;
+      max-width: 400px;
+    }
+  </style>
 </head>
-<body class="bg-green-50 min-h-screen">
-  <div class="max-w-3xl mx-auto p-4">
+<body>
+  <header>⚽ Halı Saha Bul</header>
 
-    <!-- Header -->
-    <h1 class="text-3xl font-bold text-center mb-4 text-green-800">⚽ Halı Saha Bul</h1>
+  <div id="authSection" class="container">
+    <input id="email" type="email" placeholder="E-posta" />
+    <input id="password" type="password" placeholder="Şifre" />
+    <br />
+    <button id="loginBtn">Giriş Yap</button>
+    <button id="signupBtn">Kayıt Ol</button>
+  </div>
 
-    <!-- Auth Section -->
-    <div id="authSection" class="text-center mb-6">
-      <input id="email" type="email" placeholder="E-posta" class="border rounded p-2 m-1">
-      <input id="password" type="password" placeholder="Şifre" class="border rounded p-2 m-1">
-      <button id="loginBtn" class="bg-green-600 text-white px-4 py-2 rounded">Giriş Yap</button>
-      <button id="signupBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Kayıt Ol</button>
-      <button id="logoutBtn" class="bg-gray-400 text-white px-4 py-2 rounded hidden">Çıkış Yap</button>
-    </div>
+  <div id="mainSection" class="container hidden">
+    <button id="findMatchBtn">Halı Saha Bul</button>
+    <button id="createMatchBtn">Maç Oluştur</button>
+    <button id="myMatchesBtn">Maçlarım</button>
+    <button id="logoutBtn" style="background-color:#c0392b;">Çıkış</button>
 
-    <!-- Menu -->
-    <div id="menu" class="flex justify-around mb-4 hidden">
-      <button class="tab bg-white border p-2 rounded" data-tab="bul">Halı Saha Bul</button>
-      <button class="tab bg-white border p-2 rounded" data-tab="katil">Maça Katıl</button>
-      <button class="tab bg-white border p-2 rounded" data-tab="olustur">Maç Oluştur</button>
-      <button class="tab bg-white border p-2 rounded" data-tab="profil">Profilim</button>
-    </div>
-
-    <!-- Tab Content -->
-    <div id="content" class="bg-white p-4 rounded shadow"></div>
+    <div id="contentArea"></div>
   </div>
 
   <script type="module">
-    // ✅ Firebase Başlat
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, onSnapshot, doc, updateDoc, arrayUnion, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
+    import { 
+      getAuth, 
+      createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      getDocs, 
+      updateDoc, 
+      doc, 
+      arrayUnion 
+    } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyB8-N4sVBtxIoZqikRhGoXv86YU_9K8ecA",
-  authDomain: "halisaha-1537c.firebaseapp.com",
-  projectId: "halisaha-1537c",
-  storageBucket: "halisaha-1537c.firebasestorage.app",
-  messagingSenderId: "110810439295",
-  appId: "1:110810439295:web:656f99f060ebfa88ba694a",
-  measurementId: "G-QQH8205FB0"
+      apiKey: "AIzaSyB8-N4sVBtxIoZqikRhGoXv86YU_9K8ecA",
+      authDomain: "halisaha-1537c.firebaseapp.com",
+      projectId: "halisaha-1537c",
+      storageBucket: "halisaha-1537c.firebasestorage.app",
+      messagingSenderId: "110810439295",
+      appId: "1:110810439295:web:656f99f060ebfa88ba694a",
+      measurementId: "G-QQH8205FB0"
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const content = document.getElementById("content");
-    const menu = document.getElementById("menu");
+    const authSection = document.getElementById("authSection");
+    const mainSection = document.getElementById("mainSection");
+    const contentArea = document.getElementById("contentArea");
 
-    // 🔹 Auth kontrolü
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        document.getElementById("authSection").classList.add("hidden");
-        document.getElementById("logoutBtn").classList.remove("hidden");
-        menu.classList.remove("hidden");
-        openTab("bul");
-      } else {
-        document.getElementById("authSection").classList.remove("hidden");
-        document.getElementById("logoutBtn").classList.add("hidden");
-        menu.classList.add("hidden");
-        content.innerHTML = "";
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const signupBtn = document.getElementById("signupBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    // Auth işlemleri
+    signupBtn.addEventListener("click", async () => {
+      try {
+        await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+        alert("Kayıt başarılı!");
+      } catch (err) {
+        alert(err.message);
       }
     });
 
-    // 🔹 Giriş / Kayıt / Çıkış
-    document.getElementById("loginBtn").onclick = async () => {
-      const email = email.value;
-      const password = password.value;
-      await signInWithEmailAndPassword(auth, email, password).catch(e => alert(e.message));
-    };
-    document.getElementById("signupBtn").onclick = async () => {
-      const email = email.value;
-      const password = password.value;
-      await createUserWithEmailAndPassword(auth, email, password).catch(e => alert(e.message));
-    };
-    document.getElementById("logoutBtn").onclick = async () => { await signOut(auth); };
-
-    // 🔹 Menü geçişleri
-    document.querySelectorAll(".tab").forEach(btn => {
-      btn.addEventListener("click", () => openTab(btn.dataset.tab));
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+      } catch (err) {
+        alert(err.message);
+      }
     });
 
-    // 🔹 Sekmelerin içeriği
-    function openTab(tab) {
-      if (tab === "bul") showHalisahaBul();
-      if (tab === "katil") showMaclar();
-      if (tab === "olustur") showMacOlustur();
-      if (tab === "profil") showProfil();
-    }
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
 
-    // ⚽ Halı Saha Bul
-    function showHalisahaBul() {
-      content.innerHTML = `<h2 class='text-xl font-bold mb-2'>Yakındaki Halı Sahalar</h2>
-      <p>Bu bölümde harita ve halı saha listesi olacak (bir sonraki sürümde eklenecek)</p>`;
-    }
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        authSection.classList.add("hidden");
+        mainSection.classList.remove("hidden");
+      } else {
+        authSection.classList.remove("hidden");
+        mainSection.classList.add("hidden");
+        contentArea.innerHTML = "";
+      }
+    });
 
-    // 🏃 Maçlara Katıl
-    async function showMaclar() {
-      content.innerHTML = `<h2 class='text-xl font-bold mb-2'>Açık Maçlar</h2><div id="macListesi"></div>`;
-      const q = query(collection(db, "maclar"));
-      onSnapshot(q, (snapshot) => {
-        const div = document.getElementById("macListesi");
-        div.innerHTML = "";
-        snapshot.forEach(docSnap => {
-          const mac = docSnap.data();
-          div.innerHTML += `
-            <div class='border p-2 rounded mb-2'>
-              <p><b>Saha:</b> ${mac.saha}</p>
-              <p><b>Saat:</b> ${mac.saat}</p>
-              <p><b>Eksik:</b> ${mac.eksik}</p>
-              <button class='bg-green-600 text-white px-2 py-1 rounded' onclick='katil("${docSnap.id}")'>Katılıyorum</button>
-            </div>`;
+    // Maç oluşturma
+    document.getElementById("createMatchBtn").addEventListener("click", async () => {
+      contentArea.innerHTML = `
+        <h3>Yeni Maç Oluştur</h3>
+        <input id="matchLocation" placeholder="Halısaha Adresi" /><br>
+        <input id="matchTime" placeholder="Saat (örn: 20:00)" /><br>
+        <input id="neededPlayers" type="number" placeholder="Kaç kişi lazım?" /><br>
+        <button id="saveMatchBtn">Oluştur</button>
+      `;
+
+      document.getElementById("saveMatchBtn").addEventListener("click", async () => {
+        const user = auth.currentUser;
+        const location = document.getElementById("matchLocation").value;
+        const time = document.getElementById("matchTime").value;
+        const need = document.getElementById("neededPlayers").value;
+
+        if (!location || !time || !need) return alert("Lütfen tüm alanları doldurun!");
+
+        await addDoc(collection(db, "matches"), {
+          owner: user.email,
+          location,
+          time,
+          need,
+          players: [user.email]
+        });
+
+        alert("Maç oluşturuldu!");
+        contentArea.innerHTML = "";
+      });
+    });
+
+    // Maçları listele
+    document.getElementById("findMatchBtn").addEventListener("click", async () => {
+      contentArea.innerHTML = "<h3>Yakındaki Maçlar</h3>";
+      const querySnapshot = await getDocs(collection(db, "matches"));
+      querySnapshot.forEach((docSnap) => {
+        const m = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "match-card";
+        div.innerHTML = `
+          <b>${m.location}</b><br>
+          Saat: ${m.time}<br>
+          Kalan oyuncu: ${m.need - m.players.length}<br>
+          <button data-id="${docSnap.id}" class="joinBtn">Katıl</button>
+        `;
+        contentArea.appendChild(div);
+      });
+
+      document.querySelectorAll(".joinBtn").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          const user = auth.currentUser;
+          const matchId = e.target.dataset.id;
+          const matchRef = doc(db, "matches", matchId);
+          await updateDoc(matchRef, {
+            players: arrayUnion(user.email)
+          });
+          alert("Maça katıldınız!");
         });
       });
-    }
+    });
 
-    // ⚙️ Maç Oluştur
-    function showMacOlustur() {
-      content.innerHTML = `
-        <h2 class='text-xl font-bold mb-2'>Yeni Maç Oluştur</h2>
-        <input id='saha' class='border p-2 rounded w-full mb-2' placeholder='Saha adı veya adresi'>
-        <input id='saat' class='border p-2 rounded w-full mb-2' placeholder='Saat (örn: 20:00)'>
-        <input id='eksik' class='border p-2 rounded w-full mb-2' placeholder='Eksik pozisyon (örn: Kaleci, 2 kişi vs)'>
-        <button id='kaydetMac' class='bg-green-700 text-white px-4 py-2 rounded'>Kaydet</button>
-      `;
-      document.getElementById("kaydetMac").onclick = async () => {
-        const saha = saha.value;
-        const saat = saat.value;
-        const eksik = eksik.value;
-        const user = auth.currentUser;
-        if (!user) return alert("Önce giriş yapmalısın!");
-        await addDoc(collection(db, "maclar"), { saha, saat, eksik, katilanlar: [user.email] });
-        alert("Maç oluşturuldu ✅");
-        openTab("katil");
-      };
-    }
-
-    // 👤 Profil
-    async function showProfil() {
+    // Maçlarım
+    document.getElementById("myMatchesBtn").addEventListener("click", async () => {
       const user = auth.currentUser;
-      if (!user) return;
-      const q = query(collection(db, "maclar"), where("katilanlar", "array-contains", user.email));
-      const snapshot = await getDocs(q);
-      let html = `<h2 class='text-xl font-bold mb-2'>Katıldığın Maçlar</h2>`;
-      snapshot.forEach(docSnap => {
-        const mac = docSnap.data();
-        html += `<div class='border p-2 rounded mb-2'>
-          <p><b>${mac.saha}</b> - ${mac.saat} (${mac.eksik})</p>
-        </div>`;
+      contentArea.innerHTML = "<h3>Katıldığım Maçlar</h3>";
+      const querySnapshot = await getDocs(collection(db, "matches"));
+      querySnapshot.forEach((docSnap) => {
+        const m = docSnap.data();
+        if (m.players.includes(user.email)) {
+          const div = document.createElement("div");
+          div.className = "match-card";
+          div.innerHTML = `
+            <b>${m.location}</b><br>
+            Saat: ${m.time}<br>
+            Toplam Oyuncu: ${m.players.length}
+          `;
+          contentArea.appendChild(div);
+        }
       });
-      content.innerHTML = html || "<p>Henüz maç yok</p>";
-    }
-
-    // 🔹 Katıl fonksiyonu
-    window.katil = async (id) => {
-      const user = auth.currentUser;
-      if (!user) return alert("Önce giriş yapmalısın!");
-      const ref = doc(db, "maclar", id);
-      await updateDoc(ref, { katilanlar: arrayUnion(user.email) });
-      alert("Maça katıldın ✅");
-    };
-
+    });
   </script>
 </body>
 </html>
+
+
