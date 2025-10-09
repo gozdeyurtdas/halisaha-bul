@@ -1,62 +1,48 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Halı Saha Bul</title>
-  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    body { font-family: 'Arial'; margin: 0; background: #f9f9f9; text-align: center; }
-    header { background: #2b6cb0; color: white; padding: 15px; font-size: 22px; }
-    nav { display: flex; justify-content: center; gap: 10px; margin: 15px; flex-wrap: wrap; }
-    button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-    button:hover { opacity: 0.9; }
-    .primary { background: #3182ce; color: white; }
-    .secondary { background: #e2e8f0; }
-    section { display: none; }
-    #map { height: 400px; margin: 10px auto; width: 90%; border-radius: 10px; }
-    .card { background: white; margin: 10px auto; padding: 15px; width: 90%; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    input, select { padding: 8px; margin: 5px; width: 80%; border-radius: 6px; border: 1px solid #ccc; }
-    h3 { margin-top: 0; }
-  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-  <header>⚽ Halı Saha Bul</header>
-  <nav>
-    <button class="secondary" onclick="showSection('bul')">Halı Saha Bul</button>
-    <button class="secondary" onclick="showSection('katil')">Maça Katıl</button>
-    <button class="primary" onclick="showSection('olustur')">Maç Oluştur</button>
-  </nav>
+<body class="bg-green-50 min-h-screen">
+  <div class="max-w-3xl mx-auto p-4">
 
-  <!-- Halı Saha Bul -->
-  <section id="bul">
-    <div id="map"></div>
-    <div id="macListesi"></div>
-  </section>
+    <!-- Header -->
+    <h1 class="text-3xl font-bold text-center mb-4 text-green-800">⚽ Halı Saha Bul</h1>
 
-  <!-- Maça Katıl -->
-  <section id="katil">
-    <div id="katilListesi"></div>
-  </section>
-
-  <!-- Maç Oluştur -->
-  <section id="olustur">
-    <div class="card">
-      <h3>Yeni Maç Oluştur</h3>
-      <input id="saha" placeholder="Halı Saha Adı veya Adres" />
-      <input id="saat" placeholder="Saat (örnek: 20:00)" />
-      <input id="eksik" placeholder="Eksik pozisyon (örnek: kaleci)" />
-      <input id="kackisi" type="number" placeholder="Kaç kişi lazım?" />
-      <button class="primary" onclick="macOlustur()">Maçı Kaydet</button>
+    <!-- Auth Section -->
+    <div id="authSection" class="text-center mb-6">
+      <input id="email" type="email" placeholder="E-posta" class="border rounded p-2 m-1">
+      <input id="password" type="password" placeholder="Şifre" class="border rounded p-2 m-1">
+      <button id="loginBtn" class="bg-green-600 text-white px-4 py-2 rounded">Giriş Yap</button>
+      <button id="signupBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Kayıt Ol</button>
+      <button id="logoutBtn" class="bg-gray-400 text-white px-4 py-2 rounded hidden">Çıkış Yap</button>
     </div>
-  </section>
+
+    <!-- Menu -->
+    <div id="menu" class="flex justify-around mb-4 hidden">
+      <button class="tab bg-white border p-2 rounded" data-tab="bul">Halı Saha Bul</button>
+      <button class="tab bg-white border p-2 rounded" data-tab="katil">Maça Katıl</button>
+      <button class="tab bg-white border p-2 rounded" data-tab="olustur">Maç Oluştur</button>
+      <button class="tab bg-white border p-2 rounded" data-tab="profil">Profilim</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="content" class="bg-white p-4 rounded shadow"></div>
+  </div>
 
   <script type="module">
-   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
+    // ✅ Firebase Başlat
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot, doc, updateDoc, arrayUnion, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
   apiKey: "AIzaSyB8-N4sVBtxIoZqikRhGoXv86YU_9K8ecA",
   authDomain: "halisaha-1537c.firebaseapp.com",
   projectId: "halisaha-1537c",
@@ -64,78 +50,128 @@ const firebaseConfig = {
   messagingSenderId: "110810439295",
   appId: "1:110810439295:web:656f99f060ebfa88ba694a",
   measurementId: "G-QQH8205FB0"
-};
-    const firebaseConfig = {
-      apiKey: "XXXX",
-      authDomain: "XXXX",
-      projectId: "XXXX",
-      storageBucket: "XXXX",
-      messagingSenderId: "XXXX",
-      appId: "XXXX"
     };
 
-    // Firebase başlat
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    // Bölüm geçişi
-    function showSection(id) {
-      document.querySelectorAll("section").forEach(sec => sec.style.display = "none");
-      document.getElementById(id).style.display = "block";
-      if (id === "bul") maclariGetir();
+    const content = document.getElementById("content");
+    const menu = document.getElementById("menu");
+
+    // 🔹 Auth kontrolü
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById("authSection").classList.add("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
+        menu.classList.remove("hidden");
+        openTab("bul");
+      } else {
+        document.getElementById("authSection").classList.remove("hidden");
+        document.getElementById("logoutBtn").classList.add("hidden");
+        menu.classList.add("hidden");
+        content.innerHTML = "";
+      }
+    });
+
+    // 🔹 Giriş / Kayıt / Çıkış
+    document.getElementById("loginBtn").onclick = async () => {
+      const email = email.value;
+      const password = password.value;
+      await signInWithEmailAndPassword(auth, email, password).catch(e => alert(e.message));
+    };
+    document.getElementById("signupBtn").onclick = async () => {
+      const email = email.value;
+      const password = password.value;
+      await createUserWithEmailAndPassword(auth, email, password).catch(e => alert(e.message));
+    };
+    document.getElementById("logoutBtn").onclick = async () => { await signOut(auth); };
+
+    // 🔹 Menü geçişleri
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => openTab(btn.dataset.tab));
+    });
+
+    // 🔹 Sekmelerin içeriği
+    function openTab(tab) {
+      if (tab === "bul") showHalisahaBul();
+      if (tab === "katil") showMaclar();
+      if (tab === "olustur") showMacOlustur();
+      if (tab === "profil") showProfil();
     }
-    showSection('bul');
 
-    // Harita başlat
-    const map = L.map('map').setView([41.0082, 28.9784], 11); // İstanbul merkez
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    // ⚽ Halı Saha Bul
+    function showHalisahaBul() {
+      content.innerHTML = `<h2 class='text-xl font-bold mb-2'>Yakındaki Halı Sahalar</h2>
+      <p>Bu bölümde harita ve halı saha listesi olacak (bir sonraki sürümde eklenecek)</p>`;
+    }
 
-    // Maç oluşturma
-    async function macOlustur() {
-      const saha = document.getElementById('saha').value;
-      const saat = document.getElementById('saat').value;
-      const eksik = document.getElementById('eksik').value;
-      const kackisi = document.getElementById('kackisi').value;
-
-      if (!saha || !saat) return alert("Lütfen saha adı ve saati girin!");
-
-      await db.collection("maclar").add({
-        saha, saat, eksik, kackisi, katilanlar: []
+    // 🏃 Maçlara Katıl
+    async function showMaclar() {
+      content.innerHTML = `<h2 class='text-xl font-bold mb-2'>Açık Maçlar</h2><div id="macListesi"></div>`;
+      const q = query(collection(db, "maclar"));
+      onSnapshot(q, (snapshot) => {
+        const div = document.getElementById("macListesi");
+        div.innerHTML = "";
+        snapshot.forEach(docSnap => {
+          const mac = docSnap.data();
+          div.innerHTML += `
+            <div class='border p-2 rounded mb-2'>
+              <p><b>Saha:</b> ${mac.saha}</p>
+              <p><b>Saat:</b> ${mac.saat}</p>
+              <p><b>Eksik:</b> ${mac.eksik}</p>
+              <button class='bg-green-600 text-white px-2 py-1 rounded' onclick='katil("${docSnap.id}")'>Katılıyorum</button>
+            </div>`;
+        });
       });
-
-      alert("Maç başarıyla eklendi!");
-      document.getElementById('saha').value = '';
-      document.getElementById('saat').value = '';
-      document.getElementById('eksik').value = '';
-      document.getElementById('kackisi').value = '';
     }
 
-    // Maçları listele ve haritada göster
-    async function maclariGetir() {
-      const container = document.getElementById("macListesi");
-      container.innerHTML = "";
+    // ⚙️ Maç Oluştur
+    function showMacOlustur() {
+      content.innerHTML = `
+        <h2 class='text-xl font-bold mb-2'>Yeni Maç Oluştur</h2>
+        <input id='saha' class='border p-2 rounded w-full mb-2' placeholder='Saha adı veya adresi'>
+        <input id='saat' class='border p-2 rounded w-full mb-2' placeholder='Saat (örn: 20:00)'>
+        <input id='eksik' class='border p-2 rounded w-full mb-2' placeholder='Eksik pozisyon (örn: Kaleci, 2 kişi vs)'>
+        <button id='kaydetMac' class='bg-green-700 text-white px-4 py-2 rounded'>Kaydet</button>
+      `;
+      document.getElementById("kaydetMac").onclick = async () => {
+        const saha = saha.value;
+        const saat = saat.value;
+        const eksik = eksik.value;
+        const user = auth.currentUser;
+        if (!user) return alert("Önce giriş yapmalısın!");
+        await addDoc(collection(db, "maclar"), { saha, saat, eksik, katilanlar: [user.email] });
+        alert("Maç oluşturuldu ✅");
+        openTab("katil");
+      };
+    }
 
-      const snapshot = await db.collection("maclar").get();
-      snapshot.forEach(doc => {
-        const mac = doc.data();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <h3>${mac.saha}</h3>
-          <p>🕒 Saat: ${mac.saat}</p>
-          <p>🧤 Eksik: ${mac.eksik || "Yok"}</p>
-          <p>👥 Kişi lazım: ${mac.kackisi || "Belirtilmemiş"}</p>
-        `;
-        container.appendChild(card);
-
-        // Haritada sahayı işaretle (örnek: random koordinat)
-        const lat = 41.0 + Math.random() * 0.1;
-        const lng = 28.9 + Math.random() * 0.1;
-        L.marker([lat, lng]).addTo(map).bindPopup(`<b>${mac.saha}</b><br>${mac.saat}`);
+    // 👤 Profil
+    async function showProfil() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const q = query(collection(db, "maclar"), where("katilanlar", "array-contains", user.email));
+      const snapshot = await getDocs(q);
+      let html = `<h2 class='text-xl font-bold mb-2'>Katıldığın Maçlar</h2>`;
+      snapshot.forEach(docSnap => {
+        const mac = docSnap.data();
+        html += `<div class='border p-2 rounded mb-2'>
+          <p><b>${mac.saha}</b> - ${mac.saat} (${mac.eksik})</p>
+        </div>`;
       });
+      content.innerHTML = html || "<p>Henüz maç yok</p>";
     }
+
+    // 🔹 Katıl fonksiyonu
+    window.katil = async (id) => {
+      const user = auth.currentUser;
+      if (!user) return alert("Önce giriş yapmalısın!");
+      const ref = doc(db, "maclar", id);
+      await updateDoc(ref, { katilanlar: arrayUnion(user.email) });
+      alert("Maça katıldın ✅");
+    };
+
   </script>
 </body>
 </html>
